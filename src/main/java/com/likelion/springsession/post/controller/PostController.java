@@ -7,6 +7,7 @@ import com.likelion.springsession.post.dto.PostUpdateRequest;
 import com.likelion.springsession.post.entity.Post;
 import com.likelion.springsession.post.repository.PostRepository;
 import java.util.List;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import com.likelion.springsession.post.service.PostService;
 import org.springframework.web.bind.annotation.*;
@@ -33,10 +34,12 @@ public class PostController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PostDetailResponse createPost(
-            @Valid @RequestBody PostCreateRequest request
-    ) {
-        return postService.createPost(request);
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody PostCreateRequest request) {
+
+        return postService.createPost(userId, request);
     }
+
     @GetMapping("/{postId}")
     public PostDetailResponse getPost(
             @PathVariable("postId") Long postId
@@ -45,14 +48,19 @@ public class PostController {
     }
     @PutMapping("/{postId}")
     public PostDetailResponse updatePost(
+            @AuthenticationPrincipal Long userId,
             @PathVariable("postId") Long postId,
-            @Valid @RequestBody PostUpdateRequest request
-    ) {
-        return postService.updatePost(postId, request);
+            @Valid @RequestBody PostUpdateRequest request) {
+
+        return postService.updatePost(userId, postId, request);
     }
+
     @DeleteMapping("/{postId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deletePost(@PathVariable("postId") Long postId) {
-        postService.deletePost(postId);
+    public void deletePost(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable("postId") Long postId) {
+
+        postService.deletePost(userId, postId);
     }
 }

@@ -9,13 +9,20 @@ import com.likelion.springsession.post.repository.PostRepository;
 import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.transaction.Transactional;
+import com.likelion.springsession.user.entity.User;
+import com.likelion.springsession.user.exception.UserNotFoundException;
+import com.likelion.springsession.user.repository.UserRepository;
+
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class PostService {
     private final PostRepository postRepository;
+    private final UserRepository userRepository;
 
 
     public List<PostSummaryResponse> getPostSummaries() {
@@ -26,6 +33,7 @@ public class PostService {
             PostSummaryResponse response = new PostSummaryResponse(
                     post.getId(),
                     post.getTitle(),
+                    post.getAuthor().getNickname(),
                     post.getCreatedAt()
             );
             responses.add(response);
@@ -33,21 +41,22 @@ public class PostService {
 
         return responses;
     }
-    public PostDetailResponse createPost(PostCreateRequest request) {
+    @Transactional
+    public PostDetailResponse createPost(Long userId, PostCreateRequest request) {
 
-        Post post = new Post(
-                request.getTitle(),
-                request.getContent()
-        );
-        Post savedPost = postRepository.save(post);
+        User author = userRepository.findById(userId)
+                .orElseThrow(UserNotFoundException::new);
 
-        return toDetailResponse(savedPost);
+        Post post = new Post(author, request.getTitle(), request.getContent());
+
+        return toDetailResponse(postRepository.save(post));
     }
     private PostDetailResponse toDetailResponse(Post post) {
         return new PostDetailResponse(
                 post.getId(),
                 post.getTitle(),
                 post.getContent(),
+                post.getAuthor().getNickname(),
                 post.getCreatedAt()
         );
     }
@@ -60,21 +69,28 @@ public class PostService {
                 .orElseThrow();
     }
     @Transactional
-    public PostDetailResponse updatePost(
-            Long postId,
-            PostUpdateRequest request
-    ) {
+    public PostDetailResponse updatePost(Long userId, Long postId, PostUpdateRequest request) {
+
         Post post = findPostById(postId);
 
-        post.update(
-                request.getTitle(),
-                request.getContent()
-        );
+        if (!post.isAuthor(userId)) {                    // ← 추가
+            throw new com.likelion.springsession.post.exception.PostAccessDeniedException();
+        }
+
+        post.update(request.getTitle(), request.getContent());
+
         return toDetailResponse(post);
     }
+
     @Transactional
-    public void deletePost(Long postId) {
+    public void deletePost(Long userId, Long postId) {
+
         Post post = findPostById(postId);
+
+        if (!post.isAuthor(userId)) {                    // ← 추가
+            throw new com.likelion.springsession.post.exception.PostAccessDeniedException();
+        }
+
         postRepository.delete(post);
     }
 }

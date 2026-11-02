@@ -10,6 +10,12 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+    open-in-view: false
     properties:
       hibernate:
         format_sql: true
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-validity: 1800000        # 30분  (밀리초)
+  refresh-token-validity: 1209600000    # 14일  (Part 6에서 씁니다)
